@@ -1,6 +1,3 @@
-from marshmallow import Schema, fields
-
-
 class Document(object):
     """Document object
 
@@ -25,12 +22,3 @@ class Document(object):
         return self.adapter._invoke_processors(
             'pre_insert', False, self.data, False
         )
-
-
-class CustomNumberField(fields.Number):
-    def _validated(self, value):
-        if isinstance(value, int):
-            self.num_type = int
-        elif isinstance(value, float):
-            self.num_type = float
-        return super(CustomNumberField, self)._validated(value)

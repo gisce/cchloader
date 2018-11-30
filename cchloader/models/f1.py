@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf
-from . import CustomNumberField
+from cchloader.models.utils import CustomNumberField
 
 
 class F1Schema(Schema):
