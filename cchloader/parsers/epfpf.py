@@ -12,6 +12,7 @@ class EPFPF(Parser):
     patterns = [
         # Documented
         '^EPFPF_(\w{2})_(\w{3})_(\w{4})_(\w{2})_(\d{8})\.(\d+)\.(\w{3})',
+        '^EPFPF_(\w{2})_(\w{3})_(\w{4})_(\w{2})_(\d{8})\.(\d+)',
     ]
     encoding = "iso-8859-15"
     delimiter = ';'
@@ -30,13 +31,13 @@ class EPFPF(Parser):
     def parse_line(self, line, filename = None):
         slinia = tuple(unicode(line.decode(self.encoding)).split(self.delimiter))
         slinia = map(lambda s: s.strip(), slinia)
-        parsed = {'epfpf': {}, 'orig': line}
+        parsed = {'cchepfpf': {}, 'orig': line}
         data = build_dict(self.headers, slinia)
         data['filename'] = filename
         result, errors = self.adapter.load(data)
         if errors:
             logger.error(errors)
-        parsed['epfpf'] = result
+        parsed['cchepfpf'] = result
         return parsed, errors
 
 

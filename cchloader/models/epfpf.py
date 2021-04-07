@@ -17,6 +17,7 @@ class EPFPFSchema(Schema):
     tipo_medida = fields.Integer(position=9, validate=OneOf(tipomedida_valid))
     validated = fields.Boolean(position=10)
     datetime = fields.DateTime(position=11)
-    filename = fields.String(position=12)
+    season = fields.String(position=12, validate=OneOf(['S','W']))
+    filename = fields.String(position=13)
 
 EPFPFSchema()
