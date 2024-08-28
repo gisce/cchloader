@@ -41,13 +41,24 @@ class EPFPF(Parser):
         result, errors = self.adapter.load(data)
         if errors:
             logger.error(errors)
-        dt, season = self.fill_datetime_and_season(result.data)
+
+        # Add local_timestamp and season fields
+        dt, season = self.get_datetime_and_season(result.data)
         result.data['local_timestamp'] = dt
         result.data['season'] = season
+
+        # Add type 'p'
+        result.data['type'] = 'p'
+
+        # Remove unused fields
+        for field in ['year', 'month', 'day', 'periodo']:
+            if field in result.data:
+                result.data.pop(field)
+
         parsed['giscedata_epfpf'] = result
         return parsed, errors
 
-    def fill_datetime_and_season(self, data):
+    def get_datetime_and_season(self, data):
         year = int(data.get('year'))
         month = int(data.get('month'))
         day = int(data.get('day'))
