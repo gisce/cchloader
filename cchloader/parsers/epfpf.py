@@ -5,6 +5,9 @@ from cchloader.utils import build_dict
 from cchloader.adapters.epfpf import EPFPFAdapter
 from cchloader.models.epfpf import EPFPFSchema
 from cchloader.parsers.parser import Parser, register
+from datetime import datetime, timedelta
+from pytz import timezone
+
 import six
 if six.PY3:
     unicode = str
@@ -38,8 +41,26 @@ class EPFPF(Parser):
         result, errors = self.adapter.load(data)
         if errors:
             logger.error(errors)
+        dt, season = self.fill_datetime_and_season(result.data)
+        result.data['local_timestamp'] = dt
+        result.data['season'] = season
         parsed['giscedata_epfpf'] = result
         return parsed, errors
+
+    def fill_datetime_and_season(self, data):
+        year = int(data.get('year'))
+        month = int(data.get('month'))
+        day = int(data.get('day'))
+        periodo = int(data.get('periodo'))
+        dt = datetime(year=year, month=month, day=day)
+        mad_tz = timezone('Europe/Madrid')
+        local_datetime = mad_tz.localize(dt, is_dst=None)
+        hours = timedelta(hours=periodo)
+        final_date = mad_tz.normalize(local_datetime + hours)
+        dt = final_date.strftime('%Y-%m-%d %H:%M:%S')
+        dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+        season = 1 if final_date.dst().total_seconds() == 3600 else 0
+        return dt, season
 
 
 register(EPFPF)
