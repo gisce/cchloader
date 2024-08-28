@@ -32,13 +32,13 @@ class EPFPF(Parser):
     def parse_line(self, line, filename = None):
         slinia = tuple(unicode(line.decode(self.encoding)).split(self.delimiter))
         slinia = map(lambda s: s.strip(), slinia)
-        parsed = {'epfpf': {}, 'orig': line}
+        parsed = {'giscedata_epfpf': {}, 'orig': line}
         data = build_dict(self.headers, slinia)
         data['filename'] = filename
         result, errors = self.adapter.load(data)
         if errors:
             logger.error(errors)
-        parsed['epfpf'] = result
+        parsed['giscedata_epfpf'] = result
         return parsed, errors
 
 
