@@ -30,8 +30,10 @@ class EPFPFBaseAdapter(Schema):
             data['cierre'] = ''
 
     @pre_load
-    def set_default_validated(self, data):
-        data['validated'] = False
+    def fix_type(self, data):
+        source = data.get('type')
+        if not source:
+            data['type'] = 'p'
 
 class EPFPFAdapter(EPFPFBaseAdapter, CchAdapter, EPFPFSchema):
     pass
