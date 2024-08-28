@@ -13,7 +13,7 @@ class EPFPF(Parser):
 
     patterns = [
         # Documented
-        '^EPFPF_(\w{2})_(\w{3})_(\w{4})_(\w{2})_(\d{8})\.(\d+)\.(\w{3})',
+        '^EPFPF_(\w{2})_(\w{3})_(\w{4})_(\w{2})_(\d{8})\.(\d+)',
     ]
     encoding = "iso-8859-15"
     delimiter = ';'
