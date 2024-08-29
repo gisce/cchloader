@@ -13,11 +13,5 @@ class EPFPFBaseAdapter(Schema):
         if not cierre:
             data['cierre'] = ''
 
-    @pre_load
-    def fix_type(self, data):
-        source = data.get('type')
-        if not source:
-            data['type'] = 'p'
-
 class EPFPFAdapter(EPFPFBaseAdapter, CchAdapter, EPFPFSchema):
     pass

@@ -16,6 +16,7 @@ Eina d'importació de CCH
 - `B5D`
 - `CORBAGEN`
 - `EPFPF`
+- `EPFPFQH`
 - `F1`
 - `F5D`
 - `INFPA`
