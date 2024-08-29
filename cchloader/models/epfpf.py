@@ -2,7 +2,9 @@
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf
 
-tipomedida_valid = [x for x in range(1,100)]  # TODO revisar valors possibles a REE
+# According to TiposMedidaPuntoFrontera file in ESIOS
+not_existing_tipo_medida = [6,9,12,36,38,70,71,72,74,77,81,85,86]
+tipomedida_valid = [x for x in range(1,100) if x not in not_existing_tipo_medida]
 
 class EPFPFSchema(Schema):
     name = fields.String(position=0, required=True)
@@ -14,7 +16,7 @@ class EPFPFSchema(Schema):
     valor = fields.Integer(position=6) # kWh
     firmeza = fields.String(position=7, validate=OneOf(['F','P']))
     cierre = fields.String(position=8, validate=OneOf(['P','D','']))
-    tipo_medida = fields.Integer(position=9, validate=OneOf(tipomedida_valid))  # TODO revisar format i valors possibles a REE
+    tipo_medida = fields.Integer(position=9, validate=OneOf(tipomedida_valid))
 
 
 EPFPFSchema()
