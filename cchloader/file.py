@@ -77,6 +77,7 @@ class CchFile(object):
     def __init__(self, path, fd=None, parser=None, strict=False):
         self.path = path
         self.resume_line_number = 0
+        self.errors = []
         if parser is None:
             self.parser = get_parser(self.path)(strict=strict)
         else:
@@ -111,13 +112,12 @@ class CchFile(object):
     def next(self):
         for line in self.fd:
             try:
-                # data, errors = self.parser.parse_line(line)
                 data, errors = self.parser.parse_line(line)
                 data = self._bytes_to_unicode(data)
-#                if errors:
-#                    self.stats.errors.append(
-#                        (self.stats.line_number, errors)
-#                    )
+                if errors:
+                    for error in errors.items():
+                        if error not in self.errors:
+                            self.errors.append(error)
                 return data
             except Exception as exc:
                 logger.critical(
