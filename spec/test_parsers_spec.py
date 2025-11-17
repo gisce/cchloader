@@ -173,6 +173,15 @@ with description('Testing of parsers'):
                 result_f5d = line['orig']
                 assert result_f5d == expected_f5d
                 break
+    with it('F5D(REE) parser detects and stores file format errors'):
+        with CchFile('spec/curve_files/F5D_0238_0762_20211008.1') as cch_file:
+            for line in cch_file:
+                expected_f5d = 'ES0237000000130940CT0F;2021/06/01 01:00;1;189;;;;;;0;0;TA/202100018520;\r\n'
+                result_f5d = line['orig']
+                assert result_f5d == expected_f5d
+                expected_errors = [('source', [u'Field may not be null.'])]
+                assert cch_file.errors == expected_errors
+                break
 
     with it('test to get MHCIL parser'):
         for filename in self.mhcil_filenames:
