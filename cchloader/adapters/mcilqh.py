@@ -1,13 +1,13 @@
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 from cchloader.adapters import CchAdapter
-from cchloader.models.corbagen import CorbaGenSchema
+from cchloader.models.mcilqh import McilQhSchema
 from marshmallow import Schema, fields, pre_load
 
 
-class CorbaGenBaseAdapter(Schema):
-    """ CORBAGEN Adapter
+class McilQhBaseAdapter(Schema):
+    """ MCILQH Adapter
     """
 
     @pre_load
@@ -19,6 +19,12 @@ class CorbaGenBaseAdapter(Schema):
         return data
 
     @pre_load
+    def fix_ae(self, data):
+        ae = int(data.get('ae', 0))
+        if ae < 0:
+            data['ae'] = 0
+
+    @pre_load
     def fix_season(self, data):
         valid_values = [0, 1]
         season = data.get('season')
@@ -28,5 +34,5 @@ class CorbaGenBaseAdapter(Schema):
             data['season'] = None
 
 
-class CorbaGenAdapter(CorbaGenBaseAdapter, CchAdapter, CorbaGenSchema):
+class McilQhAdapter(McilQhBaseAdapter, CchAdapter, McilQhSchema):
     pass

@@ -11,10 +11,14 @@ from cchloader.parsers.epfpfqh import EPFPFQH
 from cchloader.parsers.a5d import A5d
 from cchloader.parsers.b5d import B5d
 from cchloader.parsers.rf5d import Rf5d
+from cchloader.parsers.f5d import F5d
+from cchloader.parsers.mcilqh import McilQh
 from cchloader.parsers.mhcil import Mhcil
 from cchloader.parsers.medidas import Medidas
 from cchloader.parsers.corbagen import CorbaGen
 from cchloader.parsers.infpa import Infpa
+from cchloader.parsers.reganecu import Reganecu
+from cchloader.parsers.reganecuqh import ReganecuQh
 from cchloader.exceptions import ParserNotFoundException
 from cchloader.file import PackedCchFile, CchFile
 
@@ -52,6 +56,12 @@ with description('Testing of parsers'):
             'B5D_4321_1234_20170507.0',  # Documented
             'B5D_0189_0373_20210219.0.bz2',  # GISCE
         ]
+        self.f5d_filenames = [
+            'F5D_0237_0762_20211008.0',  # Documented
+        ]
+        self.f5d_filenames_ree = [
+            'F5D_0238_0762_20211008.0',  # Documented
+        ]
         self.rf5d_filenames = [
             'RF5D_0237_0762_20211008.0',  # Documented
         ]
@@ -65,9 +75,18 @@ with description('Testing of parsers'):
         self.corbagen_filenames = [
             'CORBAGEN_202403.0'  # Documented
         ]
+        self.reganecu_filenames = [
+            'C3_reganecu_20240501_demo'  # Documented
+        ]
+        self.reganecuqh_filenames = [
+            'C3_reganecuQH_20240501_demo'  # Documented
+        ]
         self.wrong_filename = 'P1_20170507_20170706.6'
         self.infpa_filenames = [
             'INFPA_H3_1234_P2_202401.0.bz2'  # Documented
+        ]
+        self.mcilqh_filenames = [
+            'MCILQH_20240501_demo'  # Documented
         ]
 
     with it('test to get EPFPF parser'):
@@ -172,6 +191,24 @@ with description('Testing of parsers'):
                 assert result_rf5d == expected_rf5d
                 break
 
+    with it('test to get F5D parser'):
+        for filename in self.f5d_filenames:
+            expect(get_parser(filename)).to(equal(F5d))
+    with it('F5D(REE) parser fits file format'):
+        with CchFile('spec/curve_files/F5D_0238_0762_20211008.0') as cch_file:
+            for line in cch_file:
+                expected_f5d = 'ES0237000000130940CT0F;2021/06/01 01:00;1;189;;;;;;1;0;TA/202100018520;\r\n'
+                result_f5d = line['orig']
+                assert result_f5d == expected_f5d
+                break
+    with it('F5D(CNMC) parser fits file format'):
+        with CchFile('spec/curve_files/F5D_0237_0762_20211008.0') as cch_file:
+            for line in cch_file:
+                expected_f5d = 'ES0237000000130940CT0F;2021/06/01 01:00;1;189;;;;;;1;0;TA/202100018520;0;0\r\n'
+                result_f5d = line['orig']
+                assert result_f5d == expected_f5d
+                break
+
     with it('test to get MHCIL parser'):
         for filename in self.mhcil_filenames:
             expect(get_parser(filename)).to(equal(Mhcil))
@@ -207,10 +244,44 @@ with description('Testing of parsers'):
             expect(get_parser(filename)).to(equal(CorbaGen))
     with it('CORBAGEN parser fits file format'):
         with CchFile('spec/curve_files/CORBAGEN_202403.0') as cch_file:
+            line_number = 0
             for line in cch_file:
-                expected_corbagen = 'ES1234000000000001JN0F001;2024-03-01 01:00;0;0;0;0;\n'
+                expected_corbagen = 'ES1234000000000001JN0F001;2024-03-01 07:00;0;80.534;0;80.534;\n'
                 result_corbagen = line['orig']
-                assert result_corbagen == expected_corbagen
+                if line_number == 6:
+                    assert result_corbagen == expected_corbagen
+                    break
+                line_number += 1
+            assert line_number == 6
+
+    with it('test to get REGANECU parser'):
+        for filename in self.reganecu_filenames:
+            expect(get_parser(filename)).to(equal(Reganecu))
+    with it('REGANECU parser fits file format'):
+        with CchFile('spec/curve_files/C3_reganecu_20240501_demo') as cch_file:
+            l = 1
+            for line in cch_file:
+                if l < 3:
+                    l += 1
+                    continue
+                expected_reganecu = '01/05/2024;6;DEMO_RE;0.014;;1.5042;;0.02;;;BS3;3;;C_BAN;-1;0;18X0000000004444;DSV;P_2BAN;P_3CBAN_OP;R;11;0;0;\r\n'
+                result_reganecu = line['orig']
+                assert result_reganecu == expected_reganecu
+                break
+
+    with it('test to get REGANECUQH parser'):
+        for filename in self.reganecuqh_filenames:
+            expect(get_parser(filename)).to(equal(ReganecuQh))
+    with it('REGANECUQH parser fits file format'):
+        with CchFile('spec/curve_files/C3_reganecuQH_20240501_demo') as cch_file:
+            l = 1
+            for line in cch_file:
+                if l < 3:
+                    l += 1
+                    continue
+                expected_reganecu = '27/10/2024 00:00:00;;DEMO_RE;0.014;;1.5042;;0.02;;;BS3;3;;C_BAN;-1;0;18X0000000004444;DSV;P_2BAN;P_3CBAN_OP;R;11;0;;\r\n'
+                result_reganecu = line['orig']
+                assert result_reganecu == expected_reganecu
                 break
 
     with it('test to get INFPA parser'):
@@ -230,3 +301,14 @@ with description('Testing of parsers'):
             get_parser(self.wrong_filename)
 
         expect(test_raise_error).to(raise_error(ParserNotFoundException))
+
+    with it('test to get MCILQH parser'):
+        for filename in self.mcilqh_filenames:
+            expect(get_parser(filename)).to(equal(McilQh))
+    with it('MCILQH parser fits file format'):
+        with CchFile('spec/curve_files/MCILQH_20240501_demo') as cch_file:
+            for line in cch_file:
+                expected_mcilqh = 'ES0044444444444444441F001;2024;05;01;00;15;0;0;0;0;0;0;0;R;\n'
+                result_mcilqh = line['orig']
+                assert result_mcilqh == expected_mcilqh
+                break

@@ -20,6 +20,7 @@ Eina d'importació de CCH
 - `F1`
 - `F5D`
 - `INFPA`
+- `MCILQH`
 - `MEDIDAS`
 - `MHCIL`
 - `P1`
@@ -27,4 +28,5 @@ Eina d'importació de CCH
 - `P2`
 - `P2D`
 - `REGANECU`
+- `REGANECUQH`
 - `RF5D`
