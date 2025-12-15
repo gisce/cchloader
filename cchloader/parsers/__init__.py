@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 # -*- encoding: utf-8 -*-
 from __future__ import absolute_import
 
+from cchloader.parsers.epfpf import EPFPF
+from cchloader.parsers.epfpfqh import EPFPFQH
 from cchloader.parsers.f5d import F5d
 from cchloader.parsers.p5d import P5d
 from cchloader.parsers.p1 import P1

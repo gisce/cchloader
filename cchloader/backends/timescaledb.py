@@ -29,7 +29,7 @@ def get_utc_timestamp_from_datetime_and_season(local_timestamp, season):
 class TimescaleDBBackend(BaseBackend):
     """TimescaleDB Backend
     """
-    collections = ['giscedata_corbagen']
+    collections = ['giscedata_corbagen', 'giscedata_epfpf']
 
     def __init__(self, uri=None):
         if uri is None:

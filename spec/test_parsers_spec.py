@@ -5,6 +5,9 @@ from cchloader.parsers.parser import *
 from cchloader.parsers.f1 import F1
 from cchloader.parsers.p1 import P1
 from cchloader.parsers.p2 import P2
+from cchloader.parsers.epfpf import EPFPF
+from cchloader.parsers.epfpfqh import EPFPFQH
+
 from cchloader.parsers.a5d import A5d
 from cchloader.parsers.b5d import B5d
 from cchloader.parsers.rf5d import Rf5d
@@ -24,6 +27,12 @@ with description('Testing of parsers'):
 
     with before.all:
 
+        self.epfpf_filenames = [
+            'EPFPF_HD_GEN_1234_P1_20200201.1.bz2'
+        ]
+        self.epfpfqh_filenames = [
+            'EPFPFQH_HD_GEN_1234_P1_20200201.1.bz2'
+        ]
         self.f1_filenames = [
             'F1_0022_20170507_20170706.6',  # Documented
             'F1_0022_0706_20170507_20170706.6', # Fenosa
@@ -79,6 +88,32 @@ with description('Testing of parsers'):
         self.mcilqh_filenames = [
             'MCILQH_20240501_demo'  # Documented
         ]
+
+    with it('test to get EPFPF parser'):
+        for filename in self.epfpf_filenames:
+            expect(get_parser(filename)).to(equal(EPFPF))
+    with it('EPFPF parser fits file format'):
+        with PackedCchFile('spec/curve_files/EPFPF_HD_GEN_1234_P1_20200201.1.bz2') as packed:
+            for cch_file in packed:
+                for line in cch_file:
+                    expected_epfpf = 'ES1234000000000001JN0F;2021;02;01;12;AE;32;F;D;01;\n'
+                    result_epfpf = line['orig']
+                    assert result_epfpf == expected_epfpf
+                    break
+                break
+
+    with it('test to get EPFPFQH parser'):
+        for filename in self.epfpfqh_filenames:
+            expect(get_parser(filename)).to(equal(EPFPFQH))
+    with it('EPFPFQH parser fits file format'):
+        with PackedCchFile('spec/curve_files/EPFPFQH_HD_GEN_1234_P1_20200201.1.bz2') as packed:
+            for cch_file in packed:
+                for line in cch_file:
+                    expected_epfpf = 'ES1234000000000001JN0F;2021;02;01;12;AE;32;F;D;01;\n'
+                    result_epfpf = line['orig']
+                    assert result_epfpf == expected_epfpf
+                    break
+                break
 
     with it('test to get F1 parser'):
         for filename in self.f1_filenames:
@@ -265,8 +300,7 @@ with description('Testing of parsers'):
         def test_raise_error():
             get_parser(self.wrong_filename)
 
-        expect(test_raise_error).to(raise_error(
-            ParserNotFoundException))
+        expect(test_raise_error).to(raise_error(ParserNotFoundException))
 
     with it('test to get MCILQH parser'):
         for filename in self.mcilqh_filenames:
