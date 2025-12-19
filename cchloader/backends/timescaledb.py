@@ -84,6 +84,10 @@ class TimescaleDBBackend(BaseBackend):
         if 'updated_at' in columns:
             document['updated_at'] = timestamp
 
+        # Create and Write date
+        if 'create_date' in columns:
+            document['create_date'] = timestamp
+
         if 'write_date' in columns:
             document['write_date'] = timestamp
 
