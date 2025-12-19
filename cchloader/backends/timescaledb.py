@@ -84,6 +84,13 @@ class TimescaleDBBackend(BaseBackend):
         if 'updated_at' in columns:
             document['updated_at'] = timestamp
 
+        # Create and Write date
+        if 'create_date' in columns:
+            document['create_date'] = timestamp
+
+        if 'write_date' in columns:
+            document['write_date'] = timestamp
+
         # UTC timestamp used by SOM
         if 'utc_timestamp' in columns:
             document['utc_timestamp'] = get_as_utc_timestamp(document['datetime']).strftime('%Y-%m-%d %H:%M:%S')
@@ -99,7 +106,24 @@ class TimescaleDBBackend(BaseBackend):
 
         placeholders = ', '.join(['%s'] * len(document))
         columns = ', '.join(document.keys())
-        sql = "INSERT INTO %s ( %s ) VALUES ( %s ) RETURNING *" % (collection, columns, placeholders)
+
+        on_conflict_unique_fields = cch.adapter.unique_fields
+        on_conflict_update_fields = cch.adapter.update_fields
+
+        conflict_clause = ", ".join(on_conflict_unique_fields)
+
+        set_clause = ", ".join(
+            "{} = COALESCE(EXCLUDED.{}, giscedata_epfpf.{})".format(field, field, field)
+            for field in on_conflict_update_fields
+        )
+
+
+        sql = """
+              INSERT INTO %s ( %s ) VALUES ( %s )
+              ON CONFLICT (%s)
+              DO UPDATE SET %s
+              RETURNING *
+              """ % (collection, columns, placeholders, conflict_clause, set_clause)
         self.cr.execute(sql, document.values())
         oid = self.cr.fetchone()[0]
         self.db.commit()
