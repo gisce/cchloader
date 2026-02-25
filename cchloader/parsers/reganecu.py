@@ -36,6 +36,8 @@ class Reganecu(Parser):
         result, errors = self.adapter.load(data)
         if errors:
             logger.error(errors)
+            pass
+
         parsed['reganecu'] = result
         return parsed, errors
 

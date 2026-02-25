@@ -18,5 +18,10 @@ class EPFPFSchema(Schema):
     cierre = fields.String(position=8, validate=OneOf(['P','D','']))
     tipo_medida = fields.Integer(position=9, validate=OneOf(tipomedida_valid))
 
+    # Constrain fields
+    unique_fields = ['timestamp', 'name', 'type']
+    # Upsert fields
+    update_fields = ['ai', 'ae', 'r1', 'r2', 'r3', 'r4', 'firmeza', 'cierre', 'tipo_medida', 'write_date']
+
 
 EPFPFSchema()

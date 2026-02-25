@@ -79,7 +79,9 @@ class EPFPF(Parser):
 
     def get_magn(self, data):
         magn = data.get('magnitud').lower()
-        if magn == 'as':
+        if magn == 'ae':
+            magn = 'ai'
+        elif magn == 'as':
             magn = 'ae'
         data[magn] = data.get('valor')
         for field in ['magnitud', 'valor']:
