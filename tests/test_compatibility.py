@@ -20,8 +20,6 @@ from cchloader.backends.timescaledb import (
     TimescaleDBBackend,
     get_as_utc_timestamp,
     get_utc_timestamp_from_datetime_and_season,
-    _DEFAULT_UNIQUE_FIELDS,
-    _DEFAULT_UNIQUE_FALLBACK,
 )
 from cchloader.backends import urlparse
 from cchloader.backends.base import BaseBackend
@@ -229,34 +227,19 @@ class TestGetUpsertFields(unittest.TestCase):
         self.assertEqual(unique, ['timestamp', 'name', 'type'])
         self.assertEqual(update, ['ai', 'ae'])
 
-    def test_adapter_without_unique_fields(self):
-        """Som pattern: adapter without unique_fields → default fallback."""
+    def test_adapter_without_unique_fields_raises(self):
+        """Adapter without unique_fields should raise AttributeError."""
         adapter = MockAdapterNoUpsert()
         doc = MockDocument({}, adapter)
-        unique, update = self.backend._get_upsert_fields(doc, 'tg_f1')
-        self.assertEqual(unique, _DEFAULT_UNIQUE_FALLBACK)
-        self.assertIsNone(update)
+        with self.assertRaises(AttributeError):
+            self.backend._get_upsert_fields(doc, 'tg_f1')
 
-    def test_tg_p1_default_includes_type(self):
-        """tg_p1 collection has 'type' in unique fields by default."""
-        adapter = MockAdapterNoUpsert()
-        doc = MockDocument({}, adapter)
-        unique, update = self.backend._get_upsert_fields(doc, 'tg_p1')
-        self.assertEqual(unique, ['name', 'utc_timestamp', 'type'])
-
-    def test_adapter_with_empty_unique_fields(self):
-        """Empty unique_fields list should trigger fallback."""
+    def test_adapter_with_empty_unique_fields_raises(self):
+        """Empty unique_fields list should raise AttributeError."""
         adapter = MockAdapter(unique_fields=[], update_fields=[])
         doc = MockDocument({}, adapter)
-        unique, update = self.backend._get_upsert_fields(doc, 'tg_f1')
-        self.assertEqual(unique, _DEFAULT_UNIQUE_FALLBACK)
-
-    def test_unknown_collection_uses_default_fallback(self):
-        """Unknown collection uses default name+utc_timestamp."""
-        adapter = MockAdapterNoUpsert()
-        doc = MockDocument({}, adapter)
-        unique, _ = self.backend._get_upsert_fields(doc, 'tg_unknown')
-        self.assertEqual(unique, ['name', 'utc_timestamp'])
+        with self.assertRaises(AttributeError):
+            self.backend._get_upsert_fields(doc, 'tg_f1')
 
 
 # ===========================================================================
@@ -348,7 +331,10 @@ class TestInsertBatchFlow(unittest.TestCase):
 
         backend._insert_chunk = mock_insert_chunk
 
-        adapter = MockAdapterNoUpsert()
+        adapter = MockAdapter(
+            unique_fields=['name', 'utc_timestamp'],
+            update_fields=['ai']
+        )
         doc = MockDocument(
             {'name': u'ES0031408433164001SV0F', 'ai': 100.0,
              'utc_timestamp': '2024-01-01 00:00:00', 'validated': True,
@@ -379,7 +365,10 @@ class TestInsertBatchFlow(unittest.TestCase):
 
         documents = []
         for i in range(5):
-            adapter = MockAdapterNoUpsert()
+            adapter = MockAdapter(
+                unique_fields=['name', 'utc_timestamp'],
+                update_fields=['ai']
+            )
             doc = MockDocument(
                 {'name': 'CUPS{}'.format(i), 'ai': float(i),
                  'utc_timestamp': '2024-01-01 0{}:00:00'.format(i)},
@@ -667,16 +656,14 @@ class TestTimescaleDBConfig(unittest.TestCase):
         backend = TimescaleDBBackend.__new__(TimescaleDBBackend)
         self.assertEqual(backend.batch_size, 500)
 
-    def test_default_unique_fields_p1(self):
-        """tg_p1 should have name+utc_timestamp+type as default unique fields."""
-        self.assertEqual(
-            _DEFAULT_UNIQUE_FIELDS['tg_p1'],
-            ['name', 'utc_timestamp', 'type']
-        )
-
-    def test_default_unique_fallback(self):
-        """Default fallback should be name+utc_timestamp."""
-        self.assertEqual(_DEFAULT_UNIQUE_FALLBACK, ['name', 'utc_timestamp'])
+    def test_missing_unique_fields_raises(self):
+        """Models without unique_fields should raise AttributeError."""
+        backend = TimescaleDBBackend.__new__(TimescaleDBBackend)
+        backend._columns_cache = {}
+        adapter = MockAdapterNoUpsert()
+        doc = MockDocument({}, adapter)
+        with self.assertRaises(AttributeError):
+            backend._get_upsert_fields(doc, 'tg_f1')
 
 
 # ===========================================================================
@@ -729,21 +716,12 @@ class TestInsertCch(unittest.TestCase):
         self.assertIn('ON CONFLICT (timestamp, name)', captured['sql'])
         self.assertIn('COALESCE', captured['sql'])
 
-    def test_insert_cch_fallback_without_adapter_fields(self):
-        """insert_cch should fallback to defaults for adapters without upsert fields."""
+    def test_insert_cch_raises_without_adapter_fields(self):
+        """insert_cch should raise AttributeError for adapters without upsert fields."""
         backend = TimescaleDBBackend.__new__(TimescaleDBBackend)
         backend._columns_cache = {
             'tg_f1': ['name', 'utc_timestamp', 'ai']
         }
-
-        captured = {}
-
-        import cchloader.backends.timescaledb as tsmod
-        original_ev = tsmod.execute_values
-
-        def mock_execute_values(cr, sql, rows, page_size=1):
-            captured['sql'] = sql
-            captured['rows'] = rows
 
         class MockCr:
             pass
@@ -754,20 +732,15 @@ class TestInsertCch(unittest.TestCase):
         backend.cr = MockCr()
         backend.db = MockDb()
 
-        tsmod.execute_values = mock_execute_values
-        try:
-            adapter = MockAdapterNoUpsert()
-            doc = MockDocument(
-                {'name': u'TEST', 'utc_timestamp': '2024-01-01 00:00:00', 'ai': 100.0},
-                adapter
-            )
-            doc.collection = 'tg_f1'
+        adapter = MockAdapterNoUpsert()
+        doc = MockDocument(
+            {'name': u'TEST', 'utc_timestamp': '2024-01-01 00:00:00', 'ai': 100.0},
+            adapter
+        )
+        doc.collection = 'tg_f1'
 
+        with self.assertRaises(AttributeError):
             backend.insert_cch(doc)
-        finally:
-            tsmod.execute_values = original_ev
-
-        self.assertIn('ON CONFLICT (name, utc_timestamp)', captured['sql'])
 
 
 if __name__ == '__main__':

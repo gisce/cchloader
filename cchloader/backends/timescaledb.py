@@ -201,7 +201,7 @@ class TimescaleDBBackend(BaseBackend):
         if adapter and hasattr(adapter, 'unique_fields') and adapter.unique_fields:
             unique_fields = list(adapter.unique_fields)
         else:
-            raise AtributeError('TimeScale models must have unique_fields')
+            raise AttributeError('TimeScale models must have unique_fields')
 
         if adapter and hasattr(adapter, 'update_fields') and adapter.update_fields:
             update_fields = list(adapter.update_fields)
