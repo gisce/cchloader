@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # -*- encoding: utf-8 -*-
 from __future__ import absolute_import
-
-from marshmallow import Schema, fields
+from .base import BaseSchema as Schema
+from marshmallow import fields
 from marshmallow.validate import OneOf
 
 
@@ -44,6 +44,8 @@ class P1Schema(Schema):
                             )
     validated = fields.Boolean(position=21)
     type = fields.String(position=22, validate=OneOf(['p', 'p4']))
+
+    unique_fields = ['name', 'utc_timestamp', 'type']
 
 
 P1Schema()

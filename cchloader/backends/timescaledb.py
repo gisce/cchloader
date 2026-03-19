@@ -9,13 +9,6 @@ from psycopg2.extras import execute_values
 import pytz
 
 
-# Default unique/update fields for collections without model-level definitions
-_DEFAULT_UNIQUE_FIELDS = {
-    'tg_p1': ['name', 'utc_timestamp', 'type'],
-}
-_DEFAULT_UNIQUE_FALLBACK = ['name', 'utc_timestamp']
-
-
 def get_as_utc_timestamp(t, cups=None, season=None):
     """Convert local timestamp to UTC, with Canary Islands and DST support.
 
@@ -54,6 +47,7 @@ class TimescaleDBBackend(BaseBackend):
     Som Energia layer: DST/Canary timezone, Odoo fields, batch chunking,
     collection_prefix, expanded collections.
     """
+    # TODO batch_size and collections
     batch_size = 500
     collection_prefix = 'tg_'
     collections = [
@@ -123,6 +117,7 @@ class TimescaleDBBackend(BaseBackend):
         if 'create_date' in columns:
             document['create_date'] = timestamp
 
+        # TODO user ID
         if 'create_uid' in columns:
             document['create_uid'] = 1
 
@@ -144,6 +139,7 @@ class TimescaleDBBackend(BaseBackend):
         if 'validated' in document:
             if type(document['validated']) == bool:
                 document['validated'] = 1 if document['validated'] else 0
+            # TODO new class to use inherit for validated
             elif collection not in ('tg_cchval', 'cchval'):
                 if 'validated' not in document or document['validated'] is None:
                     document['validated'] = 0
@@ -205,9 +201,7 @@ class TimescaleDBBackend(BaseBackend):
         if adapter and hasattr(adapter, 'unique_fields') and adapter.unique_fields:
             unique_fields = list(adapter.unique_fields)
         else:
-            unique_fields = _DEFAULT_UNIQUE_FIELDS.get(
-                collection, list(_DEFAULT_UNIQUE_FALLBACK)
-            )
+            raise AtributeError('TimeScale models must have unique_fields')
 
         if adapter and hasattr(adapter, 'update_fields') and adapter.update_fields:
             update_fields = list(adapter.update_fields)
@@ -239,6 +233,7 @@ class TimescaleDBBackend(BaseBackend):
                     continue
 
                 cch.backend = self
+                # TODO prefix tg_
                 target = self.collection_prefix + collection if not collection.startswith(self.collection_prefix) else collection
                 cch.collection = target
 

@@ -1,5 +1,8 @@
 # -*- encoding: utf-8 -*-
-from marshmallow import Schema, fields
+from __future__ import absolute_import
+
+from .base import BaseSchema as Schema
+from marshmallow import fields
 from marshmallow.validate import OneOf
 
 # According to TiposMedidaPuntoFrontera file in ESIOS
