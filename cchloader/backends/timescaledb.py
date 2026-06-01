@@ -54,6 +54,7 @@ class TimescaleDBBackend(BaseBackend):
         'f1', 'p1', 'cchfact', 'cchval', 'cch_gennetabeta', 'cch_autocons',
         'giscedata_corbagen', 'giscedata_epfpf',
     ]
+    unprefixed_collections = ['giscedata_corbagen', 'giscedata_epfpf']
 
     def __init__(self, uri=None):
         if uri is None:
@@ -233,8 +234,10 @@ class TimescaleDBBackend(BaseBackend):
                     continue
 
                 cch.backend = self
-                # TODO prefix tg_
-                target = self.collection_prefix + collection if not collection.startswith(self.collection_prefix) else collection
+                if not collection.startswith(self.collection_prefix) and collection not in self.unprefixed_collections:
+                    target = self.collection_prefix + collection
+                else:
+                    target = collection
                 cch.collection = target
 
                 prepared = self._prepare_cch_document(cch)
@@ -278,7 +281,16 @@ class TimescaleDBBackend(BaseBackend):
         seen = {}
         for item in batch:
             key = make_dedup_key(item)
-            seen[key] = item
+            if key not in seen:
+                seen[key] = item
+            else:
+                missing_values = dict(
+                    (field, value)
+                    for field, value in item['data'].items()
+                    if field not in seen[key]['data']
+                )
+
+                seen[key]['data'].update(missing_values)
         unique_items = list(seen.values())
 
         if not unique_items:
