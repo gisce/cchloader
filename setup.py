@@ -30,7 +30,7 @@ class Clean(_clean):
 
 setup(
     name='cchloader',
-    version='5.0.1',
+    version='5.1.0',
     packages=find_packages(),
     url='https://github.com/gisce/cchloader',
     license='GPLv3',
