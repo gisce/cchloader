@@ -7,3 +7,4 @@ click<8
 six
 pytz
 psycopg2-binary
+tqdm
