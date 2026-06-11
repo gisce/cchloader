@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from tqdm import tqdm
 import traceback
 
 
@@ -23,7 +24,7 @@ class BaseBackend(object):
     def insert_batch(self, documents):
         """Insert documents in batch. Returns list of error tracebacks."""
         errors = []
-        for document in documents:
+        for document in tqdm(documents):
             try:
                 self.insert(document)
             except Exception as _:
