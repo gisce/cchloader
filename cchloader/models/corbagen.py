@@ -1,7 +1,8 @@
 # -*- encoding: utf-8 -*-
 from __future__ import absolute_import
 
-from marshmallow import Schema, fields
+from .base import BaseSchema as Schema
+from marshmallow import fields
 from marshmallow.validate import OneOf
 
 
@@ -12,5 +13,11 @@ class CorbaGenSchema(Schema):
     generacio = fields.Float(position=3, required=True)
     autocons = fields.Float(position=4, required=True)
     excedent = fields.Float(position=5, required=True)
+
+    # Constrain fields
+    unique_fields = ['timestamp', 'name']
+
+    # Upsert fields
+    update_fields = ['generacio', 'autocons', 'excedent']
 
 CorbaGenSchema()

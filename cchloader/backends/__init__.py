@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from urlparse import urlparse as std_urlparse
+try:
+    from urlparse import urlparse as std_urlparse
+except ImportError:
+    from urllib.parse import urlparse as std_urlparse
+
 from cchloader.backends.base import BaseBackend
 
 _AVAILABLE_BACKENDS = {}
@@ -34,9 +38,12 @@ def urlparse(url):
         'username': url.username,
         'password': url.password,
         'hostname': url.hostname,
-        'port': url.port,
         'db': url.path.lstrip('/')
     }
+    try:
+        config['port'] = url.port
+    except Exception:
+        pass
     return config
 
 

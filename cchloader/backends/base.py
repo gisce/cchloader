@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from tqdm import tqdm
+import traceback
 
 
 class BaseBackend(object):
@@ -18,6 +20,16 @@ class BaseBackend(object):
 
     def insert(self, document):
         raise NotImplementedError()
+
+    def insert_batch(self, documents):
+        """Insert documents in batch. Returns list of error tracebacks."""
+        errors = []
+        for document in tqdm(documents):
+            try:
+                self.insert(document)
+            except Exception as _:
+                errors.append(traceback.format_exc())
+        return errors
 
     def get(self, collection, filters, fields=None):
         raise NotImplementedError()
