@@ -34,6 +34,13 @@ class F5d(Parser):
         parsed = {'cchfact': {}, 'orig': line}
         data = build_dict(self.headers, slinia)
         result, errors = self.adapter.load(data)
+        # Fix source to catch error
+        if isinstance(result, dict) and 'source' not in result:
+            data_dummy = data.copy()
+            data_dummy.update({'source': u'1',
+                               'season': str(data_dummy['season'])
+                               })
+            result, errors_dummy = self.adapter.load(data_dummy)
         if errors:
             logger.error(errors)
         parsed['cchfact'] = result
