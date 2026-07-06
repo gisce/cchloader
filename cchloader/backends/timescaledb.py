@@ -243,21 +243,19 @@ class TimescaleDBBackend(BaseBackend):
                 prepared = self._prepare_cch_document(cch)
                 unique_fields, update_fields = self._get_upsert_fields(cch, target)
 
-                batches_to_insert[target].append({
+                batch = batches_to_insert[target]
+                batch.append({
                     'data': OrderedDict(sorted(prepared.items())),
                     'unique_fields': unique_fields,
                     'update_fields': update_fields,
                 })
+                if len(batch) >= self.batch_size:
+                    self._insert_chunk(target, batch, page_size)
+                    del batch[:]
 
         for collection, items in batches_to_insert.items():
-            batch = []
-            for item in items:
-                batch.append(item)
-                if len(batch) >= self.batch_size:
-                    self._insert_chunk(collection, batch, page_size)
-                    batch = []
-            if batch:
-                self._insert_chunk(collection, batch, page_size)
+            if items:
+                self._insert_chunk(collection, items, page_size)
 
     def _insert_chunk(self, collection, batch, page_size=1000):
         """Insert a chunk of documents using GISCE core upsert SQL.

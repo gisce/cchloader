@@ -5,7 +5,44 @@ from io import BytesIO
 
 from cchloader.parsers.parser import get_parser
 from cchloader import logger
-from cchloader.compress import get_compressed_file, is_compressed_data
+from cchloader.compress import get_compressed_file
+
+
+BZ2_MAGIC = b'\x42\x5a\x68'
+
+
+class PrependReader(object):
+    def __init__(self, prefix, fd):
+        self.prefix = prefix or b''
+        self.fd = fd
+
+    def read(self, size=-1):
+        if not self.prefix:
+            return self.fd.read(size)
+        if size is None or size < 0:
+            data = self.prefix + self.fd.read()
+            self.prefix = b''
+            return data
+        data = self.prefix[:size]
+        self.prefix = self.prefix[size:]
+        if len(data) < size:
+            data += self.fd.read(size - len(data))
+        return data
+
+    def readline(self):
+        if not self.prefix:
+            return self.fd.readline()
+        newline_pos = self.prefix.find(b'\n')
+        if newline_pos != -1:
+            line = self.prefix[:newline_pos + 1]
+            self.prefix = self.prefix[newline_pos + 1:]
+            return line
+        line = self.prefix + self.fd.readline()
+        self.prefix = b''
+        return line
+
+    def close(self):
+        self.fd.close()
 
 
 class PackedCchFile(object):
@@ -28,10 +65,10 @@ class PackedCchFile(object):
         """
         self.path = path
         self.parser = get_parser(self.path)(strict=strict)
-        
+
         self.filename = path
         self.file = get_compressed_file(path)
-    
+
     def __iter__(self):
         return self
 
@@ -78,6 +115,7 @@ class CchFile(object):
         self.path = path
         self.resume_line_number = 0
         self.errors = set()
+        self._closed = False
         if parser is None:
             self.parser = get_parser(self.path)(strict=strict)
         else:
@@ -86,16 +124,16 @@ class CchFile(object):
             self.fd = open(path, 'rb')
         else:
             try:
-                file_content = fd.read()
-                # ZipExtFile has no seek method
-                tmp_fd = BytesIO(file_content)
-                if is_compressed_data(tmp_fd):
-                    # bz compressed files ina zip file
-                    data = bz2.decompress(file_content)
+                file_start = fd.read(5)
+                if file_start.startswith(BZ2_MAGIC):
+                    # bz compressed files in a zip file
+                    data = bz2.decompress(file_start + fd.read())
                     bzfd = BytesIO(data)
                     self.fd = bzfd
                 else:
-                    self.fd = tmp_fd
+                    # ZipExtFile has no seek method, so put back only the
+                    # bytes read to detect nested compression.
+                    self.fd = PrependReader(file_start, fd)
             except Exception as e:
                 self.fd = fd
 
@@ -110,7 +148,11 @@ class CchFile(object):
         return {x: y.decode() if isinstance(y, bytes) else y for x, y in data.items()}
 
     def next(self):
-        for line in self.fd:
+        while True:
+            line = self.fd.readline()
+            if not line:
+                self.close()
+                break
             try:
                 data, errors = self.parser.parse_line(line)
                 data = self._bytes_to_unicode(data)
@@ -134,4 +176,7 @@ class CchFile(object):
         self.close()
 
     def close(self):
+        if self._closed:
+            return
         self.fd.close()
+        self._closed = True
