@@ -214,8 +214,10 @@ with description('Testing of parsers'):
                 expected_f5d = 'ES0237000000130940CT0F;2021/06/01 01:00;1;189;;;;;;0;0;TA/202100018520;\r\n'
                 result_f5d = line['orig']
                 assert result_f5d == expected_f5d
-                expected_errors = set(["('source', [u'Field may not be null.'])"])
-                assert cch_file.errors == expected_errors
+                assert len(cch_file.errors) == 1
+                error = next(iter(cch_file.errors))
+                assert error.startswith("('source', ")
+                assert 'Field may not be null.' in error
                 break
 
     with it('test to get MHCIL parser'):
