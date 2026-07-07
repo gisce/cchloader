@@ -13,9 +13,11 @@ from __future__ import absolute_import
 
 import datetime
 import unittest
+from io import BytesIO
 
 import pytz
 
+from cchloader.file import CchFile
 from cchloader.backends.timescaledb import (
     TimescaleDBBackend,
     get_as_utc_timestamp,
@@ -66,6 +68,46 @@ class MockDocument(object):
     @property
     def backend_data(self):
         return dict(self.data)
+
+
+class MockParser(object):
+
+    def __init__(self):
+        self.adapter = type('Adapter', (), {'strict': False})()
+
+    def parse_line(self, line):
+        return {'orig': line}, {}
+
+
+class TrackingBytesIO(BytesIO):
+
+    def __init__(self, *args, **kwargs):
+        super(TrackingBytesIO, self).__init__(*args, **kwargs)
+        self.read_calls = []
+
+    def read(self, size=-1):
+        self.read_calls.append(size)
+        return super(TrackingBytesIO, self).read(size)
+
+
+# ===========================================================================
+# Tests: CchFile streaming
+# ===========================================================================
+
+class TestCchFileStreaming(unittest.TestCase):
+
+    def test_fd_streams_plain_zip_member_without_full_read(self):
+        """Plain members from packed files should not be fully read upfront."""
+        fd = TrackingBytesIO(b'abcde;line\nsecond-line\n')
+        cch_file = CchFile('inner-file', fd=fd, parser=MockParser())
+
+        try:
+            first_line = cch_file.next()
+        finally:
+            cch_file.close()
+
+        self.assertEqual(first_line['orig'], 'abcde;line\n')
+        self.assertNotIn(-1, fd.read_calls)
 
 
 # ===========================================================================
@@ -384,12 +426,56 @@ class TestInsertBatchFlow(unittest.TestCase):
         self.assertEqual(chunks_inserted[1][1], 2)
         self.assertEqual(chunks_inserted[2][1], 1)
 
-    def test_gisce_collection_gets_prefix(self):
-        """giscedata_* collections get tg_ prefix like any other."""
+    def test_batch_chunking_flushes_while_preparing(self):
+        """First chunk should be flushed before all documents are prepared."""
         backend = TimescaleDBBackend.__new__(TimescaleDBBackend)
-        backend._columns_cache = {'tg_giscedata_corbagen': ['name', 'timestamp', 'generacio']}
+        backend._columns_cache = {'tg_f1': ['name', 'ai', 'utc_timestamp']}
+        backend.collection_prefix = 'tg_'
+        backend.collections = ['f1']
+        backend.batch_size = 2
+
+        prepared_count = {'value': 0}
+        chunks_inserted = []
+
+        def mock_prepare(cch):
+            prepared_count['value'] += 1
+            return cch.backend_data
+
+        def mock_insert_chunk(collection, batch, page_size=1000):
+            chunks_inserted.append(
+                (collection, len(batch), prepared_count['value'])
+            )
+
+        backend._prepare_cch_document = mock_prepare
+        backend._insert_chunk = mock_insert_chunk
+
+        documents = []
+        for i in range(5):
+            adapter = MockAdapter(
+                unique_fields=['name', 'utc_timestamp'],
+                update_fields=['ai']
+            )
+            doc = MockDocument(
+                {'name': 'CUPS{}'.format(i), 'ai': float(i),
+                 'utc_timestamp': '2024-01-01 0{}:00:00'.format(i)},
+                adapter
+            )
+            documents.append({'f1': doc})
+
+        backend.insert_batch(documents)
+
+        self.assertEqual(
+            chunks_inserted,
+            [('tg_f1', 2, 2), ('tg_f1', 2, 4), ('tg_f1', 1, 5)]
+        )
+
+    def test_gisce_collection_stays_unprefixed(self):
+        """Configured GISCE collections should keep their native table name."""
+        backend = TimescaleDBBackend.__new__(TimescaleDBBackend)
+        backend._columns_cache = {'giscedata_corbagen': ['name', 'timestamp', 'generacio']}
         backend.collection_prefix = 'tg_'
         backend.collections = ['giscedata_corbagen']
+        backend.unprefixed_collections = ['giscedata_corbagen']
         backend.batch_size = 500
 
         chunks_inserted = []
@@ -411,7 +497,7 @@ class TestInsertBatchFlow(unittest.TestCase):
         backend.insert_batch(documents)
 
         self.assertEqual(len(chunks_inserted), 1)
-        self.assertEqual(chunks_inserted[0][0], 'tg_giscedata_corbagen')
+        self.assertEqual(chunks_inserted[0][0], 'giscedata_corbagen')
 
 
 # ===========================================================================
