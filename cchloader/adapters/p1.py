@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+from decimal import Decimal, InvalidOperation
+
 from cchloader.adapters import CchAdapter
 from cchloader.models.p1 import P1Schema
 from marshmallow import Schema, fields, pre_load
@@ -9,6 +11,30 @@ from marshmallow import Schema, fields, pre_load
 class P1BaseAdapter(Schema):
     """ P1 Adapter
     """
+
+    quality_fields = (
+        'aiquality', 'aoquality', 'r1quality', 'r2quality', 'r3quality',
+        'r4quality', 'reserve1quality', 'reserve2quality',
+    )
+
+    @staticmethod
+    def integer_quality(value):
+        decimal_value = Decimal(value or 0)
+        if decimal_value != decimal_value.to_integral_value():
+            raise ValueError('Quality must be an integer')
+        return int(decimal_value)
+
+    @pre_load
+    def fix_qualities(self, data):
+        for attr in self.quality_fields:
+            value = data.get(attr)
+            if not value:
+                continue
+            try:
+                data[attr] = self.integer_quality(value)
+            except (InvalidOperation, TypeError, ValueError, OverflowError):
+                pass
+        return data
 
     @pre_load
     def fix_numbers(self, data):
@@ -50,34 +76,33 @@ class P1BaseAdapter(Schema):
 
     @pre_load
     def valid_measure(self, data):
-        aoquality = int(data.get('aoquality') or 0)
-        r1quality = int(data.get('r1quality') or 0)
-        r2quality = int(data.get('r2quality') or 0)
-        r3quality = int(data.get('r3quality') or 0)
-        r4quality = int(data.get('r4quality') or 0)
-        reserve1quality = int(data.get('reserve1quality') or 0)
-        reserve2quality = int(data.get('reserve2quality') or 0)
+        qualities = {}
+        for attr in self.quality_fields:
+            try:
+                qualities[attr] = self.integer_quality(data.get(attr))
+            except (InvalidOperation, TypeError, ValueError, OverflowError):
+                qualities[attr] = 0
 
         aovalid = 0
-        if aoquality < 128:
+        if qualities['aoquality'] < 128:
             aovalid = 1
         r1valid = 0
-        if r1quality < 128:
+        if qualities['r1quality'] < 128:
             r1valid = 1
         r2valid = 0
-        if r2quality < 128:
+        if qualities['r2quality'] < 128:
             r2valid = 1
         r3valid = 0
-        if r3quality < 128:
+        if qualities['r3quality'] < 128:
             r3valid = 1
         r4valid = 0
-        if r4quality < 128:
+        if qualities['r4quality'] < 128:
             r4valid = 1
         res1valid = 0
-        if reserve1quality < 128:
+        if qualities['reserve1quality'] < 128:
             res1valid = 1
         res2valid = 0
-        if reserve2quality < 128:
+        if qualities['reserve2quality'] < 128:
             res2valid = 1
 
         data['aivalid'] = 1
